@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kahoot Alugsol | Cumbuca Comercial</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f2f2f2;
+      --kahoot-purple: #46178f;
+      --kahoot-dark: #25076b;
+      --red: #e21b3c;
+      --blue: #1368ce;
+      --yellow: #d89e00;
+      --green: #26890c;
+      --white: #ffffff;
+      --text: #333333;
+    }
+
+    * { box-sizing: border-box; font-family: 'Montserrat', sans-serif; margin: 0; padding: 0; }
+    body { background-color: var(--bg); color: var(--text); overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    .screen { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 2rem; }
+    .active-screen { display: flex; }
+
+    h1, h2, h3 { text-align: center; }
+    .btn { padding: 1rem 2rem; font-size: 1.2rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; transition: 0.2s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
+    .btn:active { transform: translateY(4px); box-shadow: 0 0 0 rgba(0,0,0,0); }
+    .btn-primary { background-color: var(--kahoot-purple); }
+    .btn-primary:hover { background-color: var(--kahoot-dark); }
+    .btn-action { background-color: #333; margin: 0.5rem; }
+
+    /* LOBBY */
+    #lobby-screen { background-color: var(--kahoot-purple); color: white; }
+    .pin-box { background: white; color: black; font-size: 4rem; font-weight: 900; padding: 1rem 3rem; border-radius: 10px; margin: 1rem 0; box-shadow: 0 10px 20px rgba(0,0,0,0.3); letter-spacing: 5px; }
+    .qr-mock { width: 150px; height: 150px; background: url('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=CumbucaAlugsol') no-repeat center; border: 10px solid white; border-radius: 10px; margin-bottom: 2rem; }
+    .player-input-area { display: flex; gap: 10px; margin-bottom: 2rem; }
+    .player-input-area input { padding: 1rem; font-size: 1.2rem; border-radius: 5px; border: none; outline: none; width: 300px; }
+    .players-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 800px; margin-bottom: 2rem; }
+    .player-tag { background: rgba(0,0,0,0.3); padding: 10px 20px; border-radius: 5px; font-weight: bold; font-size: 1.2rem; animation: popIn 0.3s ease; }
+
+    /* DRAW & DECISION */
+    .drawn-name { font-size: 4rem; font-weight: 900; color: var(--kahoot-purple); margin: 2rem 0; text-transform: uppercase; animation: pulse 1s infinite; }
+    .timer-circle { width: 100px; height: 100px; background: var(--kahoot-purple); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; margin: 1rem; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: background 0.3s; }
+    .pass-container { display: none; flex-direction: column; gap: 10px; align-items: center; margin-top: 1rem;}
+    .pass-select { padding: 1rem; font-size: 1.2rem; border-radius: 5px; }
+
+    /* QUESTION */
+    #question-screen { background-color: var(--bg); justify-content: flex-start; padding-top: 2rem; }
+    .top-bar { width: 100%; max-width: 1000px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .question-box { background: white; padding: 2rem; border-radius: 10px; font-size: 1.8rem; font-weight: bold; width: 100%; max-width: 1000px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 1000px; }
+    .option-btn { padding: 2rem; font-size: 1.4rem; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 15px; box-shadow: 0 6px 0 rgba(0,0,0,0.2); transition: 0.1s; }
+    .option-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+    .opt-0 { background: var(--red); } .opt-1 { background: var(--blue); } .opt-2 { background: var(--yellow); } .opt-3 { background: var(--green); }
+
+    /* MODAL AVALIAÇÃO */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 100; }
+    .modal-content { background: white; padding: 3rem; border-radius: 15px; text-align: center; max-width: 600px; }
+    .modal-content h2 { font-size: 2rem; margin-bottom: 1rem; }
+    .prenda-box { display: none; background: #ffebee; color: #c62828; padding: 1.5rem; border-radius: 10px; margin-top: 1rem; font-weight: bold; font-size: 1.2rem; border: 2px solid #c62828;}
+
+    /* PODIUM (INTERMEDIATE & FINAL) */
+    #podium-screen { background-color: var(--kahoot-purple); color: white; }
+    .leaderboard { width: 100%; max-width: 600px; margin: 2rem 0; }
+    .lb-row { display: flex; justify-content: space-between; background: rgba(255,255,255,0.1); padding: 1rem 2rem; margin-bottom: 10px; border-radius: 8px; font-size: 1.5rem; font-weight: bold; }
+    .lb-row:nth-child(1) { background: rgba(216, 158, 0, 0.9); }
+    .lb-row:nth-child(2) { background: rgba(160, 160, 160, 0.9); }
+    .lb-row:nth-child(3) { background: rgba(205, 127, 50, 0.9); }
+
+    /* FINAL PODIUM ANIMATION */
+    #final-podium-screen { background: #1a0a3a; color: white; position: relative; overflow: hidden; }
+    .podium-pillars { display: flex; align-items: flex-end; justify-content: center; gap: 20px; height: 300px; margin-top: 3rem; z-index: 10; }
+    .pillar { width: 120px; background: var(--kahoot-purple); display: flex; flex-direction: column; justify-content: flex-start; align-items: center; border-radius: 10px 10px 0 0; color: white; font-weight: bold; font-size: 1.5rem; padding-top: 10px; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
+    .p2 { height: 60%; animation: rise 1.5s ease-out; }
+    .p1 { height: 100%; background: var(--yellow); color: black; animation: rise 2s ease-out; z-index: 2; }
+    .p3 { height: 40%; background: #cd7f32; animation: rise 1s ease-out; }
+    .pillar-name { position: absolute; top: -50px; font-size: 1.5rem; width: 200px; text-align: center; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .pillar-score { font-size: 1rem; margin-top: 5px; opacity: 0.8; }
+
+    /* Confetti */
+    .confetti { position: absolute; width: 10px; height: 10px; background: var(--red); top: -10px; animation: fall linear forwards; }
+
+    @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    @keyframes rise { 0% { height: 0; } }
+    @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <!-- 1. LOBBY -->
+  <div id="lobby-screen" class="screen active-screen">
+    <h2>Entre na Cumbuca Alugsol</h2>
+    <div class="pin-box">PIN: 847 291</div>
+    <div class="qr-mock"></div>
+    <p style="margin-bottom: 2rem;">Host: Adicione o nome da galera que está na sala!</p>
+    
+    <div class="player-input-area">
+      <input type="text" id="player-name" placeholder="Nome do Jogador" onkeypress="handleEnter(event)">
+      <button class="btn btn-action" onclick="addPlayer()">Adicionar</button>
+    </div>
+    
+    <div class="players-grid" id="players-grid"></div>
+    <button class="btn btn-primary" style="font-size: 1.5rem; padding: 1.5rem 3rem;" onclick="startCumbuca()">INICIAR CUMBUCA</button>
+  </div>
+
+  <!-- 2. SORTEIO / DECISÃO -->
+  <div id="decision-screen" class="screen">
+    <h2 id="decision-title">Sorteando quem vai para a berlinda...</h2>
+    <div class="drawn-name" id="current-player-display">???</div>
+    
+    <div class="timer-circle" id="decision-timer">8</div>
+    
+    <div id="decision-buttons" style="display:none; margin-top: 1rem;">
+      <button class="btn btn-primary" onclick="goToQuestion()">VOU RESPONDER!</button>
+      <button class="btn btn-action" style="background: var(--red);" onclick="showPassMenu()">PASSAR PERGUNTA</button>
+    </div>
+
+    <div class="pass-container" id="pass-menu">
+      <p>Para quem você vai repassar?</p>
+      <select id="pass-select" class="pass-select"></select>
+      <button class="btn btn-primary" onclick="confirmPass()">Confirmar Repasse</button>
+    </div>
+    
+    <div id="devolution-menu" style="display:none; margin-top: 1rem; text-align: center;">
+      <h3 id="receiver-msg" style="margin-bottom: 1rem; color: var(--red);"></h3>
+      <button class="btn btn-primary" onclick="goToQuestion()">EU RESPONDO</button>
+      <button class="btn btn-action" style="background: #000;" onclick="devolverPergunta()">DEVOLVER PARA QUEM MANDOU!</button>
+    </div>
+  </div>
+
+  <!-- 3. PERGUNTA -->
+  <div id="question-screen" class="screen">
+    <div class="top-bar">
+      <div>Respondendo: <strong id="q-player-name" style="font-size:1.5rem; text-transform:uppercase; color: var(--kahoot-purple);"></strong></div>
+      <button class="btn btn-action" onclick="addFiveSeconds()">+5 Segundos</button>
+    </div>
+    
+    <div class="timer-circle" id="question-timer">8</div>
+    <div class="question-box" id="question-text">Carregando...</div>
+    
+    <div class="options-grid" id="options-grid"></div>
+  </div>
+
+  <!-- MODAL DE AVALIAÇÃO DO HOST -->
+  <div class="modal-overlay" id="eval-modal">
+    <div class="modal-content">
+      <h2 id="eval-title">Avaliação da Resposta</h2>
+      <p id="eval-correct-text" style="margin-bottom: 1rem; font-size: 1.2rem;"></p>
+      
+      <div id="eval-buttons">
+        <button class="btn btn-action" style="background: var(--green); width: 100%; margin-bottom: 10px;" onclick="scoreAnswer(1)">Acerto Total (100% dos Pontos)</button>
+        <button class="btn btn-action" style="background: var(--yellow); width: 100%; margin-bottom: 10px; color: black;" onclick="scoreAnswer(0.5)">Acerto Parcial (50% dos Pontos)</button>
+        <button class="btn btn-action" style="background: var(--red); width: 100%;" onclick="scoreAnswer(0)">Errou Feio (0 Pontos + Prenda)</button>
+      </div>
+
+      <div class="prenda-box" id="prenda-box">
+        🚨 HORA DA PRENDA! 🚨<br>
+        1. Grito de Guerra no salão<br>
+        2. Máscara do Narigão e Sino<br>
+        3. Post de exaltação no Instagram
+      </div>
+      
+      <button class="btn btn-primary" id="btn-next-step" style="display: none; margin-top: 1.5rem; width: 100%;" onclick="showPodium()">Ver Placar Parcial</button>
+    </div>
+  </div>
+
+  <!-- 4. PÓDIO PARCIAL -->
+  <div id="podium-screen" class="screen">
+    <h2>Placar em Tempo Real</h2>
+    <div class="leaderboard" id="partial-leaderboard"></div>
+    <button class="btn btn-action" style="background: white; color: black; font-size: 1.5rem; padding: 1.5rem 3rem;" onclick="nextRound()">Próxima Rodada</button>
+  </div>
+
+  <!-- 5. PÓDIO FINAL -->
+  <div id="final-podium-screen" class="screen">
+    <h1 style="font-size: 3rem; margin-bottom: 1rem; z-index: 10;">🏆 FIM DE CUMBUCA! 🏆</h1>
+    <h2 style="z-index: 10;">Vencedor ganha R$ 100!</h2>
+    
+    <div class="podium-pillars" id="podium-pillars">
+      <div class="pillar p2">
+        <div class="pillar-name" id="fp-2-name"></div>
+        <span style="font-size: 3rem;">2</span>
+        <div class="pillar-score" id="fp-2-score"></div>
+      </div>
+      <div class="pillar p1">
+        <div class="pillar-name" id="fp-1-name"></div>
+        <span style="font-size: 4rem;">1</span>
+        <div class="pillar-score" id="fp-1-score"></div>
+      </div>
+      <div class="pillar p3">
+        <div class="pillar-name" id="fp-3-name"></div>
+        <span style="font-size: 2rem;">3</span>
+        <div class="pillar-score" id="fp-3-score"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Audio Context para sons tipo Kahoot
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, type, time) {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.value = freq;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + time);
+        osc.stop(audioCtx.currentTime + time);
+      } catch(e) {}
+    }
+
+    // BD Perguntas
+    const questions = [
+      { points: 100, text: "Qual comercial Sonny Vaccaro assistia antes de rever a fita de 1982?", options: ["John McEnroe", "Raquetes Head c/ Arthur Ashe", "Super Bowl Budweiser", "Pepsi Magic Johnson"], correct: 1 },
+      { points: 100, text: "Qual marca de tênis Jordan usava nos treinos e queria assinar?", options: ["Adidas", "Converse", "Puma", "Reebok"], correct: 0 },
+      { points: 100, text: "No início do filme, qual a posição de mercado da divisão de basquete da Nike?", options: ["1º Lugar", "2º Lugar", "3º Lugar", "4º Lugar"], correct: 2 },
+      { points: 300, text: "Qual carro Jordan queria e quem mandava na família?", options: ["Ferrari / Pai", "Mercedes 380SL Vermelho / Mãe (Deloris)", "Porsche / Irmão", "Corvette / Agente"], correct: 1 },
+      { points: 500, text: "Qual regra da NBA o tênis violava e qual o valor da multa?", options: ["Neon proibido / US$ 10k", "51% Branco / US$ 5.000", "Cano alto / US$ 2.500", "Logo irregular / US$ 15k"], correct: 1 },
+      { points: 500, text: "Qual o drama pessoal de Rob Strasser?", options: ["Dívidas", "Ver a filha só domingo e comprar tênis para impressioná-la", "Doença", "Abrir agência"], correct: 1 },
+      { points: 1000, text: "Frase de Deloris e a cláusula inédita exigida:", options: ["'Um tênis é só um tênis até meu filho pisar' / Royalties", "'O valor não cabe no solado' / Ações", "Salário fixo", "Bônus por título"], correct: 0 },
+      { points: 1000, text: "Carro de Phil Knight e princípio da Nike citado:", options: ["Ferrari amarela", "Porsche Roxo / 'Lembrado pelas regras que quebra'", "Aston Martin Verde", "Jaguar Azul"], correct: 1 }
+    ];
+
+    let players = [];
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 8;
+    
+    // Controle da Dinâmica
+    let originalPlayer = null;
+    let activePlayer = null;
+    let isDevolvido = false;
+
+    const shapes = ['▲', '◆', '●', '■'];
+
+    // LOBBY
+    function handleEnter(e) { if(e.key === 'Enter') addPlayer(); }
+    function addPlayer() {
+      const input = document.getElementById('player-name');
+      const name = input.value.trim().toUpperCase();
+      if(name && !players.find(p => p.name === name)) {
+        players.push({ name, points: 0 });
+        input.value = '';
+        renderPlayers();
+        playTone(600, 'sine', 0.1);
+      }
+    }
+    function renderPlayers() {
+      document.getElementById('players-grid').innerHTML = players.map(p => `<div class="player-tag">${p.name}</div>`).join('');
+    }
+
+    function switchScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+      document.getElementById(id).classList.add('active-screen');
+    }
+
+    function startCumbuca() {
+      if(players.length < 2) return alert("Adicione pelo menos 2 pessoas para o repasse funcionar!");
+      currentQ = 0;
+      nextRound();
+    }
+
+    // ROUND FLOW
+    function nextRound() {
+      if(currentQ >= questions.length) return endCumbuca();
+      
+      isDevolvido = false;
+      originalPlayer = players[Math.floor(Math.random() * players.length)];
+      activePlayer = originalPlayer;
+
+      switchScreen('decision-screen');
+      document.getElementById('decision-title').innerText = "Sorteando...";
+      document.getElementById('current-player-display').innerText = "???";
+      document.getElementById('decision-buttons').style.display = 'none';
+      document.getElementById('pass-menu').style.display = 'none';
+      document.getElementById('devolution-menu').style.display = 'none';
+      
+      // Efeito de roleta
+      let ticks = 0;
+      let interval = setInterval(() => {
+        document.getElementById('current-player-display').innerText = players[ticks % players.length].name;
+        playTone(400 + (ticks*20), 'square', 0.05);
+        ticks++;
+        if(ticks > 20) {
+          clearInterval(interval);
+          document.getElementById('current-player-display').innerText = activePlayer.name;
+          document.getElementById('decision-title').innerText = "8 SEGUNDOS PARA DECIDIR!";
+          document.getElementById('decision-buttons').style.display = 'block';
+          startTimer('decision-timer', 8, timeOutDecision);
+          playTone(800, 'sine', 0.5);
+        }
+      }, 100);
+    }
+
+    // TIMER LOGIC
+    function startTimer(elementId, seconds, callback) {
+      clearInterval(timer);
+      timeLeft = seconds;
+      const el = document.getElementById(elementId);
+      el.innerText = timeLeft;
+      el.style.background = 'var(--kahoot-purple)';
+      
+      timer = setInterval(() => {
+        timeLeft--;
+        el.innerText = timeLeft;
+        if(timeLeft <= 3) { el.style.background = 'var(--red)'; playTone(400, 'triangle', 0.1); }
+        if(timeLeft <= 0) { clearInterval(timer); callback(); }
+      }, 1000);
+    }
+
+    function timeOutDecision() {
+      alert("Tempo Esgotado! Terá que responder à força!");
+      goToQuestion();
+    }
+
+    // REPASSE LOGIC
+    function showPassMenu() {
+      clearInterval(timer);
+      document.getElementById('decision-buttons').style.display = 'none';
+      const select = document.getElementById('pass-select');
+      select.innerHTML = players.filter(p => p.name !== activePlayer.name).map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+      document.getElementById('pass-menu').style.display = 'flex';
+    }
+
+    function confirmPass() {
+      const selected = document.getElementById('pass-select').value;
+      activePlayer = players.find(p => p.name === selected);
+      
+      document.getElementById('pass-menu').style.display = 'none';
+      document.getElementById('decision-title').innerText = "PERGUNTA REPASSADA!";
+      document.getElementById('current-player-display').innerText = activePlayer.name;
+      
+      document.getElementById('devolution-menu').style.display = 'block';
+      document.getElementById('receiver-msg').innerText = `${originalPlayer.name} jogou a bomba pra você! Responde ou Devolve?`;
+      
+      startTimer('decision-timer', 8, timeOutDecision);
+    }
+
+    function devolverPergunta() {
+      clearInterval(timer);
+      isDevolvido = true;
+      activePlayer = originalPlayer; // Volta pro primeiro
+      document.getElementById('devolution-menu').style.display = 'none';
+      alert(`DEVOLVIDO! ${activePlayer.name}, agora você é obrigado a responder ou paga Prenda!`);
+      goToQuestion();
+    }
+
+    // QUESTION SCREEN
+    function goToQuestion() {
+      clearInterval(timer);
+      switchScreen('question-screen');
+      document.getElementById('q-player-name').innerText = activePlayer.name;
+      
+      const q = questions[currentQ];
+      document.getElementById('question-text').innerText = `Valendo ${q.points} PTS: ${q.text}`;
+      
+      const grid = document.getElementById('options-grid');
+      grid.innerHTML = q.options.map((opt, i) => `
+        <button class="option-btn opt-${i}" onclick="hostEvaluate(${i})">
+          <span style="font-size:2rem; margin-right:10px;">${shapes[i]}</span> ${opt}
+        </button>
+      `).join('');
+      
+      startTimer('question-timer', 8, () => hostEvaluate(-1));
+    }
+
+    function addFiveSeconds() {
+      timeLeft += 5;
+      document.getElementById('question-timer').innerText = timeLeft;
+    }
+
+    // AVALIAÇÃO DO HOST
+    function hostEvaluate(selectedIdx) {
+      clearInterval(timer);
+      const q = questions[currentQ];
+      const modal = document.getElementById('eval-modal');
+      const text = document.getElementById('eval-correct-text');
+      const prendaBox = document.getElementById('prenda-box');
+      
+      document.getElementById('eval-buttons').style.display = 'block';
+      document.getElementById('btn-next-step').style.display = 'none';
+      prendaBox.style.display = 'none';
+
+      if(selectedIdx === -1) {
+        text.innerText = `Tempo Esgotado! A certa era: ${q.options[q.correct]}`;
+      } else {
+        text.innerText = `Ele respondeu: ${q.options[selectedIdx]}\nA correta é: ${q.options[q.correct]}`;
+      }
+      modal.style.display = 'flex';
+    }
+
+    function scoreAnswer(multiplier) {
+      const q = questions[currentQ];
+      const pts = q.points * multiplier;
+      activePlayer.points += pts;
+      
+      document.getElementById('eval-buttons').style.display = 'none';
+      document.getElementById('btn-next-step').style.display = 'block';
+      
+      if(multiplier === 0) {
+        playTone(200, 'sawtooth', 0.5);
+        document.getElementById('eval-correct-text').innerText = "ERROU! 0 Pontos computados.";
+        document.getElementById('prenda-box').style.display = 'block';
+      } else {
+        playTone(800, 'sine', 0.2); setTimeout(() => playTone(1000, 'sine', 0.3), 200);
+        document.getElementById('eval-correct-text').innerText = `+${pts} Pontos para ${activePlayer.name}!`;
+      }
+    }
+
+    function showPodium() {
+      document.getElementById('eval-modal').style.display = 'none';
+      currentQ++;
+      updateLeaderboard();
+      switchScreen('podium-screen');
+    }
+
+    function updateLeaderboard() {
+      const sorted = [...players].sort((a,b) => b.points - a.points);
+      document.getElementById('partial-leaderboard').innerHTML = sorted.map((p, i) => `
+        <div class="lb-row">
+          <span>${i+1}º ${p.name}</span>
+          <span>${p.points} PTS</span>
+        </div>
+      `).join('');
+    }
+
+    // PÓDIO FINAL ANIMADO
+    function endCumbuca() {
+      switchScreen('final-podium-screen');
+      const sorted = [...players].sort((a,b) => b.points - a.points);
+      
+      // Top 3 (Se houver menos de 3, previne erro)
+      const top1 = sorted[0] || {name: '-', points: 0};
+      const top2 = sorted[1] || {name: '-', points: 0};
+      const top3 = sorted[2] || {name: '-', points: 0};
+
+      document.getElementById('fp-1-name').innerText = top1.name;
+      document.getElementById('fp-1-score').innerText = top1.points + ' PTS';
+      
+      document.getElementById('fp-2-name').innerText = top2.name;
+      document.getElementById('fp-2-score').innerText = top2.points + ' PTS';
+      
+      document.getElementById('fp-3-name').innerText = top3.name;
+      document.getElementById('fp-3-score').innerText = top3.points + ' PTS';
+
+      playTone(523, 'sine', 0.2); setTimeout(() => playTone(659, 'sine', 0.2), 200); setTimeout(() => playTone(784, 'sine', 0.6), 400);
+
+      // Chuva de Confetes via JS puro
+      setInterval(() => {
+        const conf = document.createElement('div');
+        conf.className = 'confetti';
+        conf.style.left = Math.random() * 100 + 'vw';
+        conf.style.backgroundColor = ['#e21b3c', '#1368ce', '#d89e00', '#26890c'][Math.floor(Math.random()*4)];
+        conf.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        document.getElementById('final-podium-screen').appendChild(conf);
+        setTimeout(() => conf.remove(), 4000);
+      }, 100);
+    }
+  </script>
+</body>
+</html>
